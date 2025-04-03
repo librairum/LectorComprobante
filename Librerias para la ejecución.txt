@@ -1,0 +1,11 @@
+#Se debe instalar la librery PyPDF2 para trabajar con archivos .pdf
+#Ya sea para las lecturas,modificaciones, encriptación y desencriptación
+de archivos PDF.
+
+#COMANDO SENCILLO
+
+pip install PyPDF2
+
+#Se usa "re" y "os"
+#Son modulos estandar de python (vienen por defecto)
+
