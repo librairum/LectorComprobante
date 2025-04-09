@@ -1,0 +1,17 @@
+#Se debe instalar la librery PyMuPDF para trabajar con archivos .pdf
+#Ya sea para las lecturas,modificaciones, encriptación y desencriptación
+#Se debe instalar la libreria pandas para crear archivos .xlsx 
+
+#COMANDO SENCILLO
+
+pip install PyMuPDF
+pip install pandas
+pip install openpyxl #Para listar los datos extraidos
+
+
+#Se usa "re" y "os"
+#Son modulos estandar de python (vienen por defecto)
+
+#El codigo principal (main) es el archivo llamado "lecturapdf.py"
+#Los demas archivos .py son prubas
+
