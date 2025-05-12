@@ -1,7 +1,6 @@
 import fitz  # PyMuPDF
 import re
 import os
-import pandas as pd 
 
 # Función para extraer la razón social
 def extraer_razon_social(pdf_path):
@@ -14,10 +13,10 @@ def extraer_razon_social(pdf_path):
             if "lines" in block:
                 for line in block["lines"]:
                     for span in line["spans"]:
-                        if span["bbox"][1] < 150:
+                        if span["bbox"][1] < 150:  # Parte superior
                             if span["text"].isupper():
                                 texto_superior.append(span["text"])
-        break 
+        break  # Solo primera página
 
     texto_superior_filtrado = [linea for linea in texto_superior if not any(palabra in linea for palabra in ["RUC", "FACTURA", "BOLETA", "ELECTRONICA", "E001"])]
     razon_social = texto_superior_filtrado[0] if texto_superior_filtrado else ""
@@ -60,8 +59,7 @@ def extraer_datos(pdf_file_path):
     lineas = text.split('\n')
     lineas_filtradas = [
         linea for linea in lineas
-        if linea.strip() not in {"Cantidad Unidad", "Cantidad", "Unidad Medida", "ICBPER", 
-                                 "Medida", "Descripción", "Valor Unitario", "Código", "Fecha Emisión"}
+        if linea.strip() not in {"Cantidad Unidad", "Medida", "Descripción", "Valor Unitario", "Código", "Fecha Emisión"}
     ]
     text_filtrado = '\n'.join(lineas_filtradas)
 
@@ -81,14 +79,14 @@ def extraer_datos(pdf_file_path):
         match = re.search(patron, text_filtrado, re.IGNORECASE)
         datos_extraidos[campo] = match.group(1).strip() if match else 'No encontrado'
 
+    # Agregar Razón Social y Dirección (funciones separadas)
     datos_extraidos["Razón Social"] = extraer_razon_social(pdf_file_path)
     datos_extraidos["Dirección"] = extraer_direccion(pdf_file_path)
 
     return datos_extraidos
 
-# Función para procesar todos los PDFs en una carpeta y guardar en Excel
+# Función para procesar todos los PDFs en una carpeta
 def procesar_pdfs_en_carpeta(carpeta):
-    resultados = []
     for archivo in os.listdir(carpeta):
         if archivo.endswith(".pdf"):
             pdf_path = os.path.join(carpeta, archivo)
@@ -98,14 +96,6 @@ def procesar_pdfs_en_carpeta(carpeta):
             for clave, valor in datos.items():
                 print(f"{clave}: {valor}")
 
-            resultados.append(datos) 
-
-    if resultados:
-        df = pd.DataFrame(resultados)
-        df.to_excel("resultados_facturas.xlsx", index=False)
-        print("\n Datos guardados en 'resultados_facturas.xlsx'")
-    else:
-        print("No se encontraron archivos PDF válidos.")
-
+# Ruta de la carpeta con los PDFs
 pdf_folder = "BANCOS/"
 procesar_pdfs_en_carpeta(pdf_folder)
