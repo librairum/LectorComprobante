@@ -1,17 +1,72 @@
-#Se debe instalar la librery PyMuPDF para trabajar con archivos .pdf
-#Ya sea para las lecturas,modificaciones, encriptación y desencriptación
-#Se debe instalar la libreria pandas para crear archivos .xlsx 
+Se debe instalar las librerias correspondientes para que el sistema pueda funcionar correctamente
+A continuación, las librerias con su comando de instalación
 
-#COMANDO SENCILLO
+-FLASK
+Se usa para la aplicación web
+pip install flask
 
+-PYODBC
+Para conectar con SQL Server
+pip install pyodbc
+
+-BCRYPT
+Para cifrar contraseñas
+pip install bcrypt
+
+-WERKZEUG
+Para manejo seguro de archivos
+pip install werkzeug
+
+-PYMUPDF (fitz)
+Para leer y procesar archivos PDF
 pip install PyMuPDF
+
+-PANDAS
+Para manejar datos y crear archivos Excel
 pip install pandas
-pip install openpyxl #Para listar los datos extraidos
 
+-OPENPYXL
+Para generar archivos .xlsx desde pandas
+pip install openpyxl
 
-#Se usa "re" y "os"
-#Son modulos estandar de python (vienen por defecto)
+-PDF2IMAGE
+Para convertir PDF en imágenes
+pip install pdf2image
 
-#El codigo principal (main) es el archivo llamado "lecturapdf.py"
-#Los demas archivos .py son prubas
+-PYTESSERACT
+Para realizar OCR en imágenes
+pip install pytesseract
+
+-NUMPY
+Para manejo de datos numéricos
+pip install numpy
+
+-RE, OS, DATETIME
+Son módulos estándar de Python y no requieren instalación
+
+====== CONFIG OCR EMISOR ======
+
+--POPPLER
+Necesario para que pdf2image convierta PDF a imágenes
+Se descarga desde su repositorio oficial en GitHub
+Repositorio: https://github.com/oschwartz10612/poppler-windows/releases/
+
+Ejemplo de ruta configurada
+RUTA_POPPLER = r"C:\poppler\poppler-25.11.0\Library\bin"
+
+--TESSERACT OCR
+Usado para reconocimiento de texto (OCR)
+Debe instalarse manualmente desde su repositorio oficial
+Repositorio: https://github.com/UB-Mannheim/tesseract/wiki
+
+Luego se configura la ruta
+pytesseract.pytesseract.tesseract_cmd = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+
+====== BD SQL Server ======
+
+Dentro de la estructura del proyecto se encuentra una carpeta con el script completo de las tablas que se requiere en la BD
+
+====== ARCHIVO PRINCIPAL ======
+
+#El codigo principal (main) es el archivo llamado "Sistema.py"
 

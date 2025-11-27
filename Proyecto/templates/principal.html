@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gestión Documental - Panel Principal</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .watermark { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); opacity:.05; z-index:0; max-width:600px; }
+    .logo-superior { max-width:120px; }
+  </style>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const sections = document.querySelectorAll("section");
+      function showSection(id){ sections.forEach(s => s.style.display = (s.id===id?"block":"none")); }
+
+      // Menú lateral
+      document.querySelectorAll("nav a").forEach(link => {
+        link.addEventListener("click", e => {
+          e.preventDefault();
+          const id = link.getAttribute("href").replace("#","");
+          showSection(id);
+          history.replaceState(null,"","#"+id);
+        });
+      });
+
+      // Cambios de hash (ej. "Ir a reportes")
+      window.addEventListener("hashchange", () => {
+        const id = location.hash ? location.hash.substring(1) : "operaciones";
+        showSection(id);
+      });
+
+      // Sección inicial
+      const initial = location.hash ? location.hash.substring(1) : "operaciones";
+      showSection(initial);
+
+      // Autocierre de mensajes flash (3s)
+      setTimeout(() => {
+        document.querySelectorAll(".flash-msg").forEach(el => el.classList.add("hidden"));
+      }, 3000);
+
+      // Manejo del formulario de edición de usuario (AJAX hacia /editar_usuario)
+      const formEditarUsuario = document.getElementById("form-editar-usuario");
+      if (formEditarUsuario) {
+        formEditarUsuario.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const formData = new FormData(formEditarUsuario);
+          try {
+            const resp = await fetch("/editar_usuario", {
+              method: "POST",
+              body: formData
+            });
+            const data = await resp.json();
+            alert(data.mensaje || "Operación realizada");
+          } catch (err) {
+            alert("Ocurrió un error al actualizar los datos");
+          }
+        });
+      }
+
+      // Manejo del formulario de cambio de contraseña (AJAX hacia /cambiar_password)
+      const formPassword = document.getElementById("form-cambiar-password");
+      if (formPassword) {
+        formPassword.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const formData = new FormData(formPassword);
+          try {
+            const resp = await fetch("/cambiar_password", {
+              method: "POST",
+              body: formData
+            });
+            const data = await resp.json();
+            alert(data.mensaje || "Operación realizada");
+            formPassword.reset();
+          } catch (err) {
+            alert("Ocurrió un error al cambiar la contraseña");
+          }
+        });
+      }
+    });
+  </script>
+</head>
+<body class="bg-gray-900 text-white min-h-screen flex relative">
+  <img src="{{ url_for('static', filename='img/GM.jpg') }}" alt="Logo GM" class="watermark pointer-events-none select-none">
+
+  <aside class="w-64 bg-gray-800 p-6 space-y-6 min-h-screen z-10">
+    <img src="{{ url_for('static', filename='img/GM.jpg') }}" alt="Logo GM" class="logo-superior mb-6">
+    <div class="text-2xl font-bold text-white mb-6">Gestor Documental</div>
+    <nav class="space-y-4">
+      <a href="#operaciones" class="block py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Operaciones</a>
+      <a href="#subir" class="block py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Registro de compra</a>
+      <a href="#emisor" class="block py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Registro de emisor</a>
+      <a href="#reportes" class="block py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Reportes</a>
+      <a href="#config" class="block py-2 px-4 rounded-lg hover:bg-green-700 transition-colors">Configuración</a>
+    </nav>
+    <div class="absolute bottom-6 left-6">
+      <a href="/logout" class="text-sm text-gray-400 hover:text-white">Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <main class="flex-1 p-8 overflow-y-auto space-y-10 relative z-10">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="mb-2">
+          {% for category, message in messages %}
+            <div class="flash-msg p-3 mb-2 rounded-lg text-sm
+               {% if category == 'error' %} bg-red-100 text-red-700
+               {% elif category == 'success' %} bg-green-100 text-green-700
+               {% elif category == 'info' %} bg-blue-100 text-blue-700
+               {% else %} bg-gray-700 text-white {% endif %}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <!-- Operaciones -->
+    <section id="operaciones">
+      <h1 class="text-3xl font-bold mb-6">Operaciones</h1>
+
+      <!-- KPIs -->
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg mb-8">
+        <h2 class="text-xl font-semibold mb-4">Resumen</h2>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div class="bg-gray-700 p-4 rounded-xl">
+            <p class="text-gray-300">Usuarios activos</p>
+            <p class="text-2xl font-bold">{{ usuarios_activos }}</p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded-xl">
+            <p class="text-gray-300">Reportes generados</p>
+            <p class="text-2xl font-bold">{{ reportes_total }}</p>
+          </div>
+          <div class="bg-gray-700 p-4 rounded-xl">
+            <p class="text-gray-300">Exportaciones a Excel</p>
+            <p class="text-2xl font-bold">{{ exportaciones_tot }}</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Últimas 10 operaciones -->
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-xl font-semibold">Últimas 10 operaciones</h2>
+          <a href="#reportes" class="text-sm text-green-400 hover:underline">Ir a reportes</a>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border border-gray-700">
+            <thead>
+              <tr class="bg-gray-700 text-left">
+                <th class="px-4 py-2 border border-gray-600">#</th>
+                <th class="px-4 py-2 border border-gray-600">Archivo</th>
+                <th class="px-4 py-2 border border-gray-600">Tipo</th>
+                <th class="px-4 py-2 border border-gray-600">Estado</th>
+                <th class="px-4 py-2 border border-gray-600">Usuario</th>
+                <th class="px-4 py-2 border border-gray-600">Fecha</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if ultimas10 and ultimas10|length > 0 %}
+                {% for item in ultimas10 %}
+                  <tr class="hover:bg-gray-700">
+                    <td class="px-4 py-2 border border-gray-600">{{ item.OperacionID }}</td>
+                    <td class="px-4 py-2 border border-gray-600">{{ item.NombreArchivo }}</td>
+                    <td class="px-4 py-2 border border-gray-600">{{ item.Tipo }}</td>
+                    <td class="px-4 py-2 border border-gray-600">
+                      <span class="px-2 py-1 rounded text-xs
+                        {% if item.Estado == 'PROCESADO' %} bg-green-600
+                        {% elif item.Estado == 'CREADO' %} bg-yellow-600
+                        {% elif item.Estado == 'EXPORTADO' %} bg-blue-600
+                        {% else %} bg-gray-600 {% endif %}">
+                        {{ item.Estado }}
+                      </span>
+                    </td>
+                    <td class="px-4 py-2 border border-gray-600">{{ item.NombreCompleto }}</td>
+                    <td class="px-4 py-2 border border-gray-600">{{ item.FechaCreacion }}</td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td colspan="6" class="px-4 py-4 border border-gray-600 text-center text-gray-400">
+                    No hay operaciones recientes.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Registro de compra -->
+    <section id="subir">
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl font-semibold mb-2">Registro de compra</h2>
+        <p class="text-gray-400 mb-4">
+          Aquí puedes registrar las compras subiendo las boletas o facturas en PDF del comprador.
+        </p>
+        <form class="space-y-4" method="POST" action="/pdf/subir" enctype="multipart/form-data">
+          <div>
+            <label for="archivo" class="block text-sm font-medium text-gray-300">Selecciona un archivo PDF</label>
+            <input type="file" id="archivo" name="archivo" accept="application/pdf"
+                   class="mt-2 w-full text-gray-300 bg-gray-700 border border-gray-600 rounded-lg p-2" required>
+          </div>
+          <div class="flex space-x-4">
+            <button type="submit" class="bg-green-700 hover:bg-green-800 transition-colors px-4 py-2 rounded-lg font-semibold">
+              Subir archivo
+            </button>
+          </div>
+        </form>
+
+        <div class="mt-6 flex space-x-4">
+          <form method="POST" action="/procesar">
+            <button type="submit" class="bg-blue-700 hover:bg-blue-800 transition-colors px-4 py-2 rounded-lg font-semibold">
+              Procesar PDF
+            </button>
+          </form>
+          <a href="/exportar" class="bg-indigo-700 hover:bg-indigo-800 transition-colors px-4 py-2 rounded-lg font-semibold inline-block">
+            Exportar a Excel
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Registro de emisor -->
+    <section id="emisor">
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl font-semibold mb-2">Registro de emisor</h2>
+        <p class="text-gray-400 mb-4">
+          Aquí puedes registrar la información del emisor (empresa que emite la factura/boleta) a partir de PDFs escaneados.
+        </p>
+
+        <!-- Subir PDF de emisor -->
+        <form class="space-y-4" method="POST" action="/emisor/subir" enctype="multipart/form-data">
+          <div>
+            <label for="archivo_emisor" class="block text-sm font-medium text-gray-300">
+              Selecciona un archivo PDF del emisor
+            </label>
+            <input type="file" id="archivo_emisor" name="archivo_emisor" accept="application/pdf"
+                   class="mt-2 w-full text-gray-300 bg-gray-700 border border-gray-600 rounded-lg p-2" required>
+          </div>
+          <div class="flex space-x-4">
+            <button type="submit" class="bg-green-700 hover:bg-green-800 transition-colors px-4 py-2 rounded-lg font-semibold">
+              Subir archivo
+            </button>
+          </div>
+        </form>
+
+        <!-- Botones para procesar y exportar emisores -->
+        <div class="mt-6 flex space-x-4">
+          <form method="POST" action="/emisor/procesar">
+            <button type="submit" class="bg-blue-700 hover:bg-blue-800 transition-colors px-4 py-2 rounded-lg font-semibold">
+              Procesar emisor
+            </button>
+          </form>
+          <a href="/emisor/exportar" class="bg-indigo-700 hover:bg-indigo-800 transition-colors px-4 py-2 rounded-lg font-semibold inline-block">
+            Exportar emisores a Excel
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Reportes -->
+    <section id="reportes">
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+        <h2 class="text-xl font-semibold mb-4">Reportes generados</h2>
+        <div class="overflow-x-auto">
+          <table class="min-w-full table-auto border border-gray-700">
+            <thead>
+              <tr class="bg-gray-700 text-left">
+                <th class="px-4 py-2 border border-gray-600">#</th>
+                <th class="px-4 py-2 border border-gray-600">Archivo</th>
+                <th class="px-4 py-2 border border-gray-600">Tipo</th>
+                <th class="px-4 py-2 border border-gray-600">Fecha</th>
+                <th class="px-4 py-2 border border-gray-600">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% if reportes and reportes|length > 0 %}
+                {% for r in reportes %}
+                  <tr class="hover:bg-gray-700">
+                    <td class="px-4 py-2 border border-gray-600">{{ r.OperacionID }}</td>
+                    <td class="px-4 py-2 border border-gray-600">{{ r.NombreArchivo }}</td>
+                    <td class="px-4 py-2 border border-gray-600">{{ r.Tipo }}</td>
+                    <td class="px-4 py-2 border border-gray-600">{{ r.FechaCreacion }}</td>
+                    <td class="px-4 py-2 border border-gray-600">
+                      {% if r.NombreArchivo.lower().endswith('.pdf') %}
+                        <a href="/operacion/{{ r.OperacionID }}/ver" class="bg-green-700 hover:bg-green-800 px-3 py-1 rounded text-sm">Ver</a>
+                      {% endif %}
+                      <a href="/operacion/{{ r.OperacionID }}/descargar" class="bg-blue-700 hover:bg-blue-800 px-3 py-1 rounded text-sm ml-2">Descargar</a>
+                    </td>
+                  </tr>
+                {% endfor %}
+              {% else %}
+                <tr>
+                  <td class="px-4 py-4 border border-gray-600 text-center text-gray-400" colspan="5">
+                    No hay reportes aún.
+                  </td>
+                </tr>
+              {% endif %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- Configuración -->
+    <section id="config">
+      <div class="bg-gray-800 p-6 rounded-lg shadow-lg space-y-6">
+        <h2 class="text-xl font-semibold mb-4">Configuración del sistema</h2>
+
+        <!-- Datos de usuario -->
+        <div class="bg-gray-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold mb-3">Datos del usuario</h3>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <p class="text-gray-400">Nombre completo</p>
+              <p class="font-semibold">{{ nombre }}</p>
+            </div>
+            <div>
+              <p class="text-gray-400">Correo</p>
+              <p class="font-semibold">{{ correo }}</p>
+            </div>
+            <div>
+              <p class="text-gray-400">Estado</p>
+              {% if estado == 'Activo' %}
+              <span class="inline-flex items-center px-2 py-1 rounded-full bg-green-600 text-xs font-semibold">
+                Activo
+              </span>
+              {% else %}
+              <span class="inline-flex items-center px-2 py-1 rounded-full bg-red-600 text-xs font-semibold">
+                Inactivo
+              </span>
+              {% endif %}
+            </div>
+            <div>
+              <p class="text-gray-400">Fecha de registro</p>
+              <p class="font-semibold">{{ fecha_creacion }}</p>
+            </div>
+            <div>
+              <p class="text-gray-400">Último acceso</p>
+              <p class="font-semibold">{{ ultimo_acceso }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Edición de usuario -->
+        <div class="bg-gray-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold mb-3">Editar perfil</h3>
+          <form id="form-editar-usuario" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            <div>
+              <label class="block text-gray-300 mb-1">Nombre completo</label>
+              <input type="text" name="nombre"
+                     value="{{ nombre }}"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100">
+            </div>
+            <div>
+              <label class="block text-gray-300 mb-1">Correo</label>
+              <input type="email" name="correo"
+                     value="{{ correo }}"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100">
+            </div>
+            <div class="md:col-span-2 mt-4">
+              <button type="submit"
+                      class="bg-green-700 hover:bg-green-800 transition-colors px-4 py-2 rounded-lg font-semibold">
+                Guardar cambios
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Cambio de contraseña -->
+        <div class="bg-gray-700 p-4 rounded-lg">
+          <h3 class="text-lg font-semibold mb-3">Cambiar contraseña</h3>
+          <form id="form-cambiar-password" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <label class="block text-gray-300 mb-1">Contraseña actual</label>
+              <input type="password" name="actual"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100">
+            </div>
+            <div>
+              <label class="block text-gray-300 mb-1">Nueva contraseña</label>
+              <input type="password" name="nueva"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100">
+            </div>
+            <div>
+              <label class="block text-gray-300 mb-1">Confirmar nueva contraseña</label>
+              <input type="password" name="confirmar"
+                     class="w-full bg-gray-800 border border-gray-600 rounded-lg p-2 text-gray-100">
+            </div>
+            <div class="md:col-span-3 mt-4">
+              <button type="submit"
+                      class="bg-blue-700 hover:bg-blue-800 transition-colors px-4 py-2 rounded-lg font-semibold">
+                Cambiar contraseña
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
